@@ -22,6 +22,7 @@ void main(void)
 	vec4 col1 = vec4(waterColor, 0.2);
 	vec4 col2 = vec4(skyColor, 1.0);
 
+
 	outColor = mix(col1, col2, reflFactor);
 
 }

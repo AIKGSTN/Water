@@ -16,10 +16,14 @@ using namespace glm;
 
 // 3D Models
 C3dglTerrain terrain, water;
+C3dglModel char1;
 
 // texture ids
 GLuint idTexGrass;
 GLuint idTexSand;
+GLuint idTexCube;
+
+// programs
 C3dglProgram programBasic;
 C3dglProgram programWater;
 C3dglProgram programTerrain;
@@ -95,8 +99,8 @@ bool init()
 
 	// water
 	programWater.use();
-	programWater.sendUniform("waterColor", vec3(0.2f, 0.22f, 0.02f));
-	programWater.sendUniform("skyColor", vec3(0.2f, 0.6f, 1.0f));
+	programWater.sendUniform("waterColor", vec3(0.4f, 0.22f, 0.02f));
+	programWater.sendUniform("skyColor", vec3(0.4f, 0.6f, 1.0f));
 
 	// terrain
 	programTerrain.use();
@@ -104,17 +108,35 @@ bool init()
 	programTerrain.sendUniform("waterLevel", waterLevel);
 	
 
+
 	// textures
+
+	// load Cube Map 
+
 	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_2D, idTexSand);
-	programTerrain.sendUniform("textureBed", 1);
+	glGenTextures(1, &idTexCube);
 	
+	glBindTexture(GL_TEXTURE_CUBE_MAP, idTexCube);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
 	glActiveTexture(GL_TEXTURE2);
+	glBindTexture(GL_TEXTURE_2D, idTexSand);
+	programTerrain.sendUniform("textureBed", 2);
+	
+	glActiveTexture(GL_TEXTURE3);
 	glBindTexture(GL_TEXTURE_2D, idTexGrass);
-	programTerrain.sendUniform("textureShore", 2);
+	programTerrain.sendUniform("textureShore", 3);
 
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	// load textures
+	programBasic.sendUniform("texture", 0);
+	programWater.sendUniform("textureCubeMap", 1);
 
 	// glut additional setup
 	glutSetVertexAttribCoord3(programBasic.getAttribLocation("aVertex"));
@@ -126,6 +148,7 @@ bool init()
 	programTerrain.use();
 	if (!terrain.load("models\\heightmap.png", 10)) return false;
 	if (!water.load("models\\watermap.png", 10, &programWater)) return false;
+	if (!char1.load("models\\Sitting Idle.fbx", 10)) return false;
 
 	// setup lights (for basic and terrain programs only, water does not use these lights):
 	programBasic.sendUniform("lightAmbient.color", vec3(0.1, 0.1, 0.1));
@@ -151,7 +174,7 @@ bool init()
 		vec3(0.0, 1.0, 0.0));
 
 	// setup the screen background colour
-	glClearColor(0.2f, 0.6f, 1.f, 1.0f);   // blue sky colour
+	glClearColor(0.4f, 0.6f, 1.f, 1.0f);   // blue sky colour
 
 	cout << endl;
 	cout << "Use:" << endl;
@@ -160,12 +183,16 @@ bool init()
 	cout << "  Drag the mouse to look around" << endl;
 	cout << endl;
 
+	// char textures
+	char1.loadMaterials("models\\Sitting Idle.fbx");
+
 	return true;
 }
 
 void renderScene(mat4& matrixView, float time, float deltaTime)
 {
 	mat4 m;
+	programWater.sendUniform("t", time);
 
 	// Render Terrain
 	programTerrain.use();
@@ -173,22 +200,38 @@ void renderScene(mat4& matrixView, float time, float deltaTime)
 	// Setup the Diffuse Material to: Green Grass
 	programTerrain.sendUniform("materialDiffuse", vec3(0.2f, 0.8f, 0.2f));
 
+	// non reflective 
+	glActiveTexture(GL_TEXTURE0);
+	programTerrain.sendUniform("reflectionPower", 0.0);
+
 	// render the terrain
 	m = matrixView;
 	m = scale(m, vec3(1.0f, 2.0f, 1.0f));
 	m = translate(m, vec3(0, -5, 0));
 	terrain.render(m);
 
-	// Render Water
-	programWater.use();
+	// non reflective
+	glActiveTexture(GL_TEXTURE0);
+	programTerrain.sendUniform("reflectionPower", 0.0);
+
+	// char1
 	m = matrixView;
-	m = translate(m, vec3(0, waterLevel, 0));
-	m = scale(m, vec3(0.5, 1.0f, 0.5f));
-	programWater.sendUniform("matrixModelView", m);
-	water.render(m);
+	m = translate(matrixView, vec3(1, 2, 1));
+	m = scale(m, vec3(0.04, 0.04, 0.04));
+	m = rotate(m, radians(-40.0f), vec3(0,1,0));
+	std::vector<mat4> transforms;
+	char1.getAnimData(0, time, transforms);
+	programBasic.sendUniform("bones", &transforms[0], transforms.size());
+	char1.loadAnimations();
+	char1.render(m);
 
 	// Setup the Diffuse Material to: Watery Green
 	programWater.sendUniform("materialAmbient", vec3(0.2f, 0.22f, 0.02f));
+
+	// reflection texture
+	glActiveTexture(GL_TEXTURE1);
+	programWater.sendUniform("reflectionPower", 1.0);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, idTexCube);
 
 	// render the water
 	m = matrixView;
@@ -196,6 +239,66 @@ void renderScene(mat4& matrixView, float time, float deltaTime)
 	m = scale(m, vec3(8.0f, 8.0f, 8.0f));
 	programWater.sendUniform("matrixModelView", m);
 	water.render(m);
+
+	
+}
+
+void prepareCubeMap(float x, float y, float z, float time, float deltaTime)
+
+{
+	// Store the current viewport in a safe place 
+	GLint viewport[4];
+
+	glGetIntegerv(GL_VIEWPORT, viewport);
+
+	int w = viewport[2];
+	int h = viewport[3];
+
+	// setup the viewport to 256x256, 90 degrees FoV (Field of View) 
+	glViewport(0, 0, 256, 256);
+	programWater.sendUniform("matrixProjection", perspective(radians(90.f), 1.0f, 0.02f, 1000.0f));
+
+	// render environment 6 times 
+	programWater.sendUniform("reflectionPower", 0.0);
+
+	for (int i = 0; i < 6; ++i)
+	{
+		// clear background 
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		// setup the camera 
+		const GLfloat ROTATION[6][6] =
+
+		{	// at              up 
+		{ 1.0, 0.0, 0.0,   0.0, -1.0, 0.0 },  // pos x 
+		{ -1.0, 0.0, 0.0,  0.0, -1.0, 0.0 },  // neg x 
+		{ 0.0, 1.0, 0.0,   0.0, 0.0, 1.0 },   // pos y 
+		{ 0.0, -1.0, 0.0,  0.0, 0.0, -1.0 },  // neg y 
+		{ 0.0, 0.0, 1.0,   0.0, -1.0, 0.0 },  // poz z 
+		{ 0.0, 0.0, -1.0,  0.0, -1.0, 0.0 }   // neg z 
+		};
+
+		mat4 matrixView2 = lookAt(
+			vec3(x, y, z),
+			vec3(x + ROTATION[i][0], y + ROTATION[i][1], z + ROTATION[i][2]),
+			vec3(ROTATION[i][3], ROTATION[i][4], ROTATION[i][5]));
+
+		// send the View Matrix 
+		programWater.sendUniform("matrixView", matrixView);
+
+		// render scene objects - all but the reflective one 
+		glActiveTexture(GL_TEXTURE0);
+		renderScene(matrixView2, time, deltaTime);
+
+		// send the image to the cube texture 
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, idTexCube);
+		glCopyTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB8, 0, 0, 256, 256, 0);
+	}
+
+	// restore the matrixView, viewport and projection 
+	void onReshape(int w, int h);
+	onReshape(w, h);
 }
 
 void onRender()
@@ -225,7 +328,7 @@ void onRender()
 	// setup View Matrix
 	programBasic.sendUniform("matrixView", matrixView);
 	programTerrain.sendUniform("matrixView", matrixView);
-	programWater.sendUniform("matrixView", matrixView);
+	//programWater.sendUniform("matrixView", matrixView);
 
 	// render the scene objects
 	renderScene(matrixView, time, deltaTime);
