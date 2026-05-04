@@ -148,6 +148,7 @@ bool init()
 	programTerrain.use();
 	if (!terrain.load("models\\heightmap.png", 10)) return false;
 	if (!water.load("models\\watermap.png", 10, &programWater)) return false;
+	programBasic.use();
 	if (!char1.load("models\\Sitting Idle.fbx", 10)) return false;
 
 	// setup lights (for basic and terrain programs only, water does not use these lights):
@@ -166,6 +167,9 @@ bool init()
 	programBasic.sendUniform("materialDiffuse", vec3(1.0, 1.0, 1.0));
 	programTerrain.sendUniform("materialDiffuse", vec3(1.0, 1.0, 1.0));
 
+	// char textures
+	char1.loadMaterials("models\\Sitting Idle.fbx");
+
 	// Initialise the View Matrix (initial position of the camera)
 	matrixView = rotate(mat4(1), radians(12.f), vec3(1, 0, 0));
 	matrixView *= lookAt(
@@ -183,8 +187,6 @@ bool init()
 	cout << "  Drag the mouse to look around" << endl;
 	cout << endl;
 
-	// char textures
-	char1.loadMaterials("models\\Sitting Idle.fbx");
 
 	return true;
 }
@@ -215,15 +217,15 @@ void renderScene(mat4& matrixView, float time, float deltaTime)
 	programTerrain.sendUniform("reflectionPower", 0.0);
 
 	// char1
-	m = matrixView;
-	m = translate(matrixView, vec3(1, 2, 1));
-	m = scale(m, vec3(0.04, 0.04, 0.04));
-	m = rotate(m, radians(-40.0f), vec3(0,1,0));
 	std::vector<mat4> transforms;
 	char1.getAnimData(0, time, transforms);
 	programBasic.sendUniform("bones", &transforms[0], transforms.size());
-	char1.loadAnimations();
+	m = matrixView;
+	m = translate(matrixView, vec3(1, 4, 1));
+	m = scale(m, vec3(0.04, 0.04, 0.04));
+	m = rotate(m, radians(-40.0f), vec3(0,1,0));
 	char1.render(m);
+	char1.loadAnimations();
 
 	// Setup the Diffuse Material to: Watery Green
 	programWater.sendUniform("materialAmbient", vec3(0.2f, 0.22f, 0.02f));
