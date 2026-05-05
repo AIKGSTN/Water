@@ -19,6 +19,7 @@ C3dglTerrain terrain, water;
 C3dglModel char1;
 
 // texture ids
+C3dglBitmap bitmap;
 GLuint idTexGrass;
 GLuint idTexSand;
 GLuint idTexCube;
@@ -35,8 +36,8 @@ float waterLevel = 1.6f;
 mat4 matrixView;
 
 // Camera & navigation
-float maxspeed = 4.f;	// camera max speed
-float accel = 4.f;		// camera acceleration
+float maxspeed = 8.f;	// camera max speed
+float accel = 10.f;		// camera acceleration
 vec3 _acc(0), _vel(0);	// camera acceleration and velocity vectors
 float _fov = 60.f;		// field of view (zoom)
 
@@ -122,6 +123,16 @@ bool init()
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+	// Grass
+	bitmap.load("models/grass.png", GL_RGBA);
+	if (!bitmap.getBits()) return false;
+	glActiveTexture(GL_TEXTURE3);
+	glGenTextures(1, &idTexGrass);
+	glBindTexture(GL_TEXTURE_2D, idTexGrass);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, bitmap.getWidth(), bitmap.getHeight(), 0, GL_RGBA,
+		GL_UNSIGNED_BYTE, bitmap.getBits());
 
 	glActiveTexture(GL_TEXTURE2);
 	glBindTexture(GL_TEXTURE_2D, idTexSand);
