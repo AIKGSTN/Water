@@ -17,12 +17,17 @@ using namespace glm;
 // 3D Models
 C3dglTerrain terrain, water;
 C3dglModel char1;
+C3dglModel tree;
+
+// skybox
+C3dglSkyBox skybox;
 
 // texture ids
 C3dglBitmap bitmap;
 GLuint idTexGrass;
 GLuint idTexSand;
 GLuint idTexCube;
+GLuint idTexNone;
 
 // programs
 C3dglProgram programBasic;
@@ -111,8 +116,24 @@ bool init()
 
 
 	// textures
+	if (!skybox.load(
+	"models\\night skybox\\FullMoonFront.png",
+		"models\\night skybox\\FullMoonLeft.png",
+		"models\\night skybox\\FullMoonBack.png",
+		"models\\night skybox\\FullMoonRight.png",
+		"models\\night skybox\\FullMoonUp.png",
+		"models\\night skybox\\FullMoonDown.png"))
+		return false;
 
 	// load Cube Map 
+
+	// no texture	
+	glGenTextures(1, &idTexNone);
+	glBindTexture(GL_TEXTURE_2D, idTexNone);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	BYTE bytes[] = { 255, 255, 255 };
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 1, 1, 0, GL_BGR, GL_UNSIGNED_BYTE, &bytes);
+
 
 	glActiveTexture(GL_TEXTURE1);
 	glGenTextures(1, &idTexCube);
@@ -161,6 +182,13 @@ bool init()
 	if (!water.load("models\\watermap.png", 10, &programWater)) return false;
 	programBasic.use();
 	if (!char1.load("models\\Sitting Idle.fbx", 10)) return false;
+	if (!tree.load("models\\tree\\christmas_tree.obj", 10)) return false;
+
+	// char textures
+	char1.loadMaterials("models\\Sitting Idle.fbx");
+
+	// tree textures
+	tree.loadMaterials("models\\tree\\branch.png");
 
 	// setup lights (for basic and terrain programs only, water does not use these lights):
 	programBasic.sendUniform("lightAmbient.color", vec3(0.1, 0.1, 0.1));
@@ -178,8 +206,7 @@ bool init()
 	programBasic.sendUniform("materialDiffuse", vec3(1.0, 1.0, 1.0));
 	programTerrain.sendUniform("materialDiffuse", vec3(1.0, 1.0, 1.0));
 
-	// char textures
-	char1.loadMaterials("models\\Sitting Idle.fbx");
+
 
 	// Initialise the View Matrix (initial position of the camera)
 	matrixView = rotate(mat4(1), radians(12.f), vec3(1, 0, 0));
@@ -206,6 +233,9 @@ void renderScene(mat4& matrixView, float time, float deltaTime)
 {
 	mat4 m;
 	programWater.sendUniform("t", time);
+
+	programBasic.sendUniform("matrixView", matrixView);
+	skybox.render(m);
 
 	// Render Terrain
 	programTerrain.use();
@@ -238,6 +268,20 @@ void renderScene(mat4& matrixView, float time, float deltaTime)
 	char1.render(m);
 	char1.loadAnimations();
 
+	static float alpha = 0;
+	static float omega = 0.7f;
+	alpha += omega * deltaTime * 50;
+	m = matrixView;
+	m = translate(m, vec3(1, 8, 1));
+	m = rotate(m, radians(alpha), vec3(1, 0, 0));
+	m = translate(m, vec3(1, 8,1));
+	mat4 m1 = m;
+	m = m1;
+	m = translate(m, vec3(0, 550, 0));
+	m = scale(m, vec3(10));
+	programBasic.sendUniform("matrixModelView", m);
+	glutSolidSphere(1.0, 32, 32);
+
 	// Setup the Diffuse Material to: Watery Green
 	programWater.sendUniform("materialAmbient", vec3(0.2f, 0.22f, 0.02f));
 
@@ -253,7 +297,15 @@ void renderScene(mat4& matrixView, float time, float deltaTime)
 	programWater.sendUniform("matrixModelView", m);
 	water.render(m);
 
-	
+	// tree
+	/*std::vector<mat4> transforms;
+	tree.getAnimData(0, time, transforms);*/
+	m = matrixView;
+	m = translate(matrixView, vec3(1, 4, 1));
+	m = scale(m, vec3(10, 10, 10));
+	m = rotate(m, radians(-40.0f), vec3(0, 1, 0));
+	tree.render(m);
+	tree.loadAnimations();
 }
 
 void prepareCubeMap(float x, float y, float z, float time, float deltaTime)

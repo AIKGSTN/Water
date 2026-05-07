@@ -19,7 +19,7 @@ out vec3 normal;
 out vec2 texCoord0;
 
 // bones
-#define MAX_BONES 100
+#define MAX_BONES 206
 uniform mat4 bones[MAX_BONES];
 in vec3 aTangent;
 in vec3 aBiTangent;
@@ -61,13 +61,19 @@ vec4 DirectionalLight(DIRECTIONAL light)
 void main(void) 
 {
 	mat4 matrixBone;
-	if (aBoneWeight[0] == 0)
-	matrixBone = mat4(1);
+	if(aBoneWeight[0] == 0.0)
+	{
+		matrixBone = mat4(1);
+	}
 	else
-	matrixBone = (bones[aBoneId[0]] * aBoneWeight[0] + 
-		bones[aBoneId[1]] * aBoneWeight[1] + 
-		bones[aBoneId[2]] * aBoneWeight[2] + 
-		bones[aBoneId[3]] * aBoneWeight[3]);
+	{
+		matrixBone = (bones[aBoneId[0]] * aBoneWeight[0] + 
+							bones[aBoneId[1]] * aBoneWeight[1] + 
+							bones[aBoneId[2]] * aBoneWeight[2] + 
+							bones[aBoneId[3]] * aBoneWeight[3]);
+	}
+
+	texCoord0 = aTexCoord;
 
 	// calculate position
 	position = matrixModelView * matrixBone * vec4(aVertex, 1.0);
