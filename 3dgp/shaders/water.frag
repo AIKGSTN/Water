@@ -6,6 +6,11 @@ in vec4 position;
 in vec3 normal;
 in vec2 texCoord0;
 
+in vec3 texCoordCubeMap; 
+uniform samplerCube textureCubeMap; 
+uniform sampler2D texture0;
+uniform float reflectionPower; 
+
 
 // Output Variable (sent down through the Pipeline)
 out vec4 outColor;
@@ -21,6 +26,8 @@ void main(void)
 
 	vec4 col1 = vec4(waterColor, 0.2);
 	vec4 col2 = vec4(skyColor, 1.0);
+
+	outColor = mix(outColor * texture(texture0, texCoord0.st),texture(textureCubeMap, texCoordCubeMap), reflectionPower);
 
 
 	outColor = mix(col1, col2, reflFactor);

@@ -18,6 +18,8 @@ out vec4 position;
 out vec3 normal;
 out vec2 texCoord0;
 
+out vec3 texCoordCubeMap; 
+
 // bones
 #define MAX_BONES 206
 uniform mat4 bones[MAX_BONES];
@@ -61,7 +63,7 @@ vec4 DirectionalLight(DIRECTIONAL light)
 void main(void) 
 {
 	mat4 matrixBone;
-	if(aBoneWeight[0] == 0.0)
+	if (aBoneWeight[0] == 0.0)
 	{
 		matrixBone = mat4(1);
 	}
@@ -73,8 +75,6 @@ void main(void)
 							bones[aBoneId[3]] * aBoneWeight[3]);
 	}
 
-	texCoord0 = aTexCoord;
-
 	// calculate position
 	position = matrixModelView * matrixBone * vec4(aVertex, 1.0);
 	gl_Position = matrixProjection * position;
@@ -84,6 +84,8 @@ void main(void)
 
 	// calculate texture coordinate
 	texCoord0 = aTexCoord;
+
+	texCoordCubeMap = -inverse(mat3(matrixView)) * mix(reflect(position.xyz, normal.xyz), normal.xyz, 0.2);
 
 	// calculate light
 	color = vec4(0, 0, 0, 1);

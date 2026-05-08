@@ -17,6 +17,7 @@ out vec4 position;
 out vec3 normal;
 out vec2 texCoord0;
 
+out vec3 texCoordCubeMap;
 out float reflFactor;
 
 
@@ -73,6 +74,8 @@ void main(void)
 	float cosTheta = dot(normal, normalize(-position.xyz));
 	float R0 = 0.02;
 	reflFactor = R0 + (1 - R0) * pow(1.0f - cosTheta, 5);
+
+	texCoordCubeMap = -inverse(mat3(matrixView)) * mix(reflect(position.xyz, normal), normal, 0.2);
 
 	// calculate light
 	color = vec4(0, 0, 0, 1);

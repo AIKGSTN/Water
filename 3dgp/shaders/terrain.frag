@@ -6,7 +6,8 @@ in vec4 position;
 in vec3 normal;
 in vec2 texCoord0;
 
-uniform vec3 fogColor = vec3(0.2f, 0.22f, 0.02f); 
+// uniform vec3 fogColor = vec3(0.2f, 0.22f, 0.02f); 
+uniform vec3 fogColor; 
 in float fogFactor; 
 
 // Output Variable (sent down through the Pipeline)

@@ -22,6 +22,8 @@ C3dglModel tree;
 // skybox
 C3dglSkyBox skybox;
 
+bool isDay = true;
+
 // texture ids
 C3dglBitmap bitmap;
 GLuint idTexGrass;
@@ -103,29 +105,26 @@ bool init()
 	if (!programTerrain.link()) return false;
 	if (!programTerrain.use(true)) return false;
 
+
+	programBasic.use();
+
+	// sky texture
+	if (!skybox.load(
+		"models\\day skybox\\SunnyDayFront.jpg",
+		"models\\day skybox\\SunnyDayLeft.jpg",
+		"models\\day skybox\\SunnyDayBack.jpg",
+		"models\\day skybox\\SunnyDayRight.jpg",
+		"models\\day skybox\\SunnyDayUp.jpg",
+		"models\\day skybox\\SunnyDayDown.jpg"))
+		return false;
 	// water
 	programWater.use();
-	programWater.sendUniform("waterColor", vec3(0.4f, 0.22f, 0.02f));
-	programWater.sendUniform("skyColor", vec3(0.4f, 0.6f, 1.0f));
-
 	// terrain
 	programTerrain.use();
-	programTerrain.sendUniform("waterColor", vec3(0.2f, 0.22f, 0.02f));
-	programTerrain.sendUniform("waterLevel", waterLevel);
+
 	
+	C3dglBitmap bm;
 
-
-	// textures
-	if (!skybox.load(
-	"models\\night skybox\\FullMoonFront.png",
-		"models\\night skybox\\FullMoonLeft.png",
-		"models\\night skybox\\FullMoonBack.png",
-		"models\\night skybox\\FullMoonRight.png",
-		"models\\night skybox\\FullMoonUp.png",
-		"models\\night skybox\\FullMoonDown.png"))
-		return false;
-
-	// load Cube Map 
 
 	// no texture	
 	glGenTextures(1, &idTexNone);
@@ -134,7 +133,7 @@ bool init()
 	BYTE bytes[] = { 255, 255, 255 };
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 1, 1, 0, GL_BGR, GL_UNSIGNED_BYTE, &bytes);
 
-
+	// load Cube Map 
 	glActiveTexture(GL_TEXTURE1);
 	glGenTextures(1, &idTexCube);
 	
@@ -144,6 +143,21 @@ bool init()
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+
+	bm.load("models\\day skybox\\SunnyDayLeft.jpg", GL_RGBA); glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X, 0,
+		GL_RGBA, bm.getWidth(), abs(bm.getHeight()), 0, GL_RGBA, GL_UNSIGNED_BYTE, bm.getBits());
+	bm.load("models\\day skybox\\SunnyDayRight.jpg", GL_RGBA); glTexImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_X, 0,
+		GL_RGBA, bm.getWidth(), abs(bm.getHeight()), 0, GL_RGBA, GL_UNSIGNED_BYTE, bm.getBits());
+	bm.load("models\\day skybox\\SunnyDayDown.jpg", GL_RGBA); glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_Y, 0,
+		GL_RGBA, bm.getWidth(), abs(bm.getHeight()), 0, GL_RGBA, GL_UNSIGNED_BYTE, bm.getBits());
+	bm.load("models\\day skybox\\SunnyDayUp.jpg", GL_RGBA); glTexImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_Y, 0,
+		GL_RGBA, bm.getWidth(), abs(bm.getHeight()), 0, GL_RGBA, GL_UNSIGNED_BYTE, bm.getBits());
+	bm.load("models\\day skybox\\SunnyDayFront.jpg", GL_RGBA); glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_Z, 0,
+		GL_RGBA, bm.getWidth(), abs(bm.getHeight()), 0, GL_RGBA, GL_UNSIGNED_BYTE, bm.getBits());
+	bm.load("models\\day skybox\\SunnyDayBack.jpg", GL_RGBA); glTexImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_Z, 0,
+		GL_RGBA, bm.getWidth(), abs(bm.getHeight()), 0, GL_RGBA, GL_UNSIGNED_BYTE, bm.getBits());
+
 
 	// Grass
 	bitmap.load("models/grass.png", GL_RGBA);
@@ -232,20 +246,46 @@ bool init()
 void renderScene(mat4& matrixView, float time, float deltaTime)
 {
 	mat4 m;
+	
+	// water
 	programWater.sendUniform("t", time);
-
+	
+	// matrix view
 	programBasic.sendUniform("matrixView", matrixView);
-	skybox.render(m);
-
+	
+	// skybox
+	if (isDay)
+	{
+		m = matrixView;
+		programBasic.sendUniform("materialDiffuse", vec3(0.0f, 0.0f, 0.0f));
+		programBasic.sendUniform("lightAmbient.color", vec3(1, 1, 1));
+		programBasic.sendUniform("materialAmbient", vec3(1, 1, 1));
+		glActiveTexture(GL_TEXTURE0);
+		programBasic.sendUniform("reflectionPower", 0.0);
+		skybox.render(m);
+		programBasic.sendUniform("materialDiffuse", vec3(0.6, 0.6, 0.2));
+		programBasic.sendUniform("lightAmbient.color", vec3(0.1, 0.1, 0.1));
+		programBasic.sendUniform("materialAmbient", vec3(1.0, 1.0, 1.0));
+	}
+	if (!isDay)
+	{
+		m = matrixView;
+		programBasic.sendUniform("materialDiffuse", vec3(1.0f, 0.0f, 0.0f));
+		programBasic.sendUniform("lightAmbient.color", vec3(1, 0, 0));
+		programBasic.sendUniform("materialAmbient", vec3(1, 0, 0));
+		glActiveTexture(GL_TEXTURE0);
+		programBasic.sendUniform("reflectionPower", 0.0);
+		skybox.render(m);
+		programBasic.sendUniform("materialDiffuse", vec3(0.6, 0.0, 0.0));
+		programBasic.sendUniform("lightAmbient.color", vec3(0.1, 0.0, 0.0));
+		programBasic.sendUniform("materialAmbient", vec3(1.0, 0.0, 0.0));
+	}
 	// Render Terrain
 	programTerrain.use();
 
 	// Setup the Diffuse Material to: Green Grass
 	programTerrain.sendUniform("materialDiffuse", vec3(0.2f, 0.8f, 0.2f));
 
-	// non reflective 
-	glActiveTexture(GL_TEXTURE0);
-	programTerrain.sendUniform("reflectionPower", 0.0);
 
 	// render the terrain
 	m = matrixView;
@@ -255,7 +295,7 @@ void renderScene(mat4& matrixView, float time, float deltaTime)
 
 	// non reflective
 	glActiveTexture(GL_TEXTURE0);
-	programTerrain.sendUniform("reflectionPower", 0.0);
+	programWater.sendUniform("reflectionPower", 0.0);
 
 	// char1
 	std::vector<mat4> transforms;
@@ -267,7 +307,8 @@ void renderScene(mat4& matrixView, float time, float deltaTime)
 	m = rotate(m, radians(-40.0f), vec3(0,1,0));
 	char1.render(m);
 	char1.loadAnimations();
-
+	
+	// sun
 	static float alpha = 0;
 	static float omega = 0.7f;
 	alpha += omega * deltaTime * 50;
@@ -287,25 +328,34 @@ void renderScene(mat4& matrixView, float time, float deltaTime)
 
 	// reflection texture
 	glActiveTexture(GL_TEXTURE1);
-	programWater.sendUniform("reflectionPower", 1.0);
 	glBindTexture(GL_TEXTURE_CUBE_MAP, idTexCube);
-
+	programBasic.sendUniform("reflectionPower", 1.0);
 	// render the water
 	m = matrixView;
 	m = translate(m, vec3(0, waterLevel, 0));
 	m = scale(m, vec3(8.0f, 8.0f, 8.0f));
 	programWater.sendUniform("matrixModelView", m);
 	water.render(m);
+	
+	if (isDay)
+	{
+		programWater.sendUniform("waterColor", vec3(0.4f, 0.22f, 0.02f));
+		programWater.sendUniform("skyColor", vec3(0.4f, 0.6f, 1.0f));
 
-	// tree
-	/*std::vector<mat4> transforms;
-	tree.getAnimData(0, time, transforms);*/
-	m = matrixView;
-	m = translate(matrixView, vec3(1, 4, 1));
-	m = scale(m, vec3(10, 10, 10));
-	m = rotate(m, radians(-40.0f), vec3(0, 1, 0));
-	tree.render(m);
-	tree.loadAnimations();
+		programTerrain.sendUniform("fogColor", vec3(0.2f, 0.22f, 0.02f));
+		programTerrain.sendUniform("waterColor", vec3(0.2f, 0.22f, 0.02f));
+		programTerrain.sendUniform("waterLevel", waterLevel);
+	}
+	if (!isDay)
+	{
+		programWater.sendUniform("waterColor", vec3(0.4f, 0.0f, 0.0f));
+		programWater.sendUniform("skyColor", vec3(0.4f, 0.0f, 0.0f));
+
+		programTerrain.sendUniform("fogColor", vec3(0.3f, 0.0f, 0.0f));
+		programTerrain.sendUniform("waterColor", vec3(0.2f, 0.0f, 0.0f));
+		programTerrain.sendUniform("waterLevel", waterLevel);
+	}
+	
 }
 
 void prepareCubeMap(float x, float y, float z, float time, float deltaTime)
@@ -430,6 +480,7 @@ void onKeyDown(unsigned char key, int x, int y)
 	case 'd': _acc.x = -accel; break;
 	case 'e': _acc.y = accel; break;
 	case 'q': _acc.y = -accel; break;
+	case 'n': isDay = !isDay; break;
 	}
 }
 
